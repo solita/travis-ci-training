@@ -1,0 +1,98 @@
+
+Bucket policy:
+{
+    "Version": "2012-10-17",
+        "Statement": [
+        {
+	    "Principal": {
+	      "AWS": "arn:aws:iam::071856031484:user/manowar"	      
+	    },
+            "Effect": "Allow",
+            "Action": [
+                    "s3:*"
+             ],
+            "Resource": [
+                   "arn:aws:s3:::brothers-of-metal"
+            ]
+       }
+   ]
+}
+
+
+Testaus:
+aws s3api list-objects --bucket brothers-of-metal --profile manowar
+
+aws s3api put-object --bucket brothers-of-metal --key index.html --body index.html --profile manowar --content-type 'text/html'
+
+
+
+travis-yml tietokannan generointi:
+sudo: required
+addons:
+  postgresql: '9.3'
+
+services:
+ - postgresql
+
+before_install:
+ - sudo apt-get install graphviz
+
+before_script:
+ - psql --file=dev.sql
+ - psql --file=db-schema.sql
+ 
+script:
+ - cd db-docs
+  - generate-schemadocs.sh
+
+after_script:
+  - ls -latr schemadocs
+
+
+travis-yml, deploy:
+
+
+minttu:travis-ci-training anttivi$ travis setup s3
+Detected repository as lokori/travis-ci-training, is this correct? |yes| yes
+Access key ID: AKIAIZTBD3CEKZLF65DA
+Secret access key: ****************************************
+Bucket: brothers-of-metal
+Local project directory to upload (Optional): schemadocs
+S3 upload directory (Optional):
+S3 ACL Settings (private, public_read, public_read_write, authenticated_read, bucket_owner_read, bucket_owner_full_control): public_read
+Encrypt secret access key? |yes| yes
+Push only from lokori/travis-ci-training? |yes| yes
+
+tämän jälkeen lisättävä
+  skip_cleanup: true 
+
+
+
+final travis.yml:
+
+sudo: required
+addons:
+  postgresql: '9.3'
+services:
+- postgresql
+before_install:
+- sudo apt-get install graphviz
+before_script:
+- psql --file=dev.sql
+- psql --file=db-schema.sql -d app
+script:
+- cd db-docs
+- generate-schemadocs.sh
+after_script:
+- ls -latr schemadocs
+deploy:
+  provider: s3
+  skip_cleanup: true
+  access_key_id: AKIAIZTBD3CEKZLF65DA
+  secret_access_key:
+    secure: Kk8Bt16mgzswMXuo9PpD7QILbR6jVCpWlcVtjETMnW0qzV8eADtjVji4DChUaZyrMhtlHrglxykyDb9zl2xKHTsj46uf4+hU/jgQqu/j6a7sQ3doe8Yo6fNM9uMnV6WGJPd9wEcd3xi/W5gLFYTELJ61WQwfR78wIblvN/4/h+z6TxChui7wujqzg+PztndbaeMHz5gS2O/yIejpFA84oOXSfgev7NbfPTQvP8GmbdsGhW9wZXz67VKLDroPhS316Jt9+rXITUdMaP06abQQ/dPRIFudmEUYDm6cXtU2x6NjrTYBEEL4Ga0Reis0zvMFsks2nm59pVU8v0pyjC9Ot0oR86Cug5eXGbJNnNY9iWzvqaPI8///5x44AnrGLavdu99U7u30vYSD74RdstLcllM3YksYWdnoYATcwWh6DEbk/LCBKeP0/osVHReaLAlWoH7dm6Q+cjEWyRSxoBmv8J4YvIgQpqB5K5r/JxKya76iVmhsYWoXPT3rcV1LY5ePscE3giT/W3G7Tn+sECo3wB+/Sdg3MiFOkHQPMvYW9J68jW6d6pKGOxwKI9DiXoGvlkc2HFTdtbWDZGCYeYJ8eQq60J0JSmELiA2zYXNA8Wyx8qG8KF9ijacQA520BfRD/1IvKiTbomS4sF73/ViDPMrksDztAQA0h+MqLhiq9so=
+  bucket: brothers-of-metal
+  local-dir: schemadocs
+  acl: public_read
+  on:
+    repo: lokori/travis-ci-training
